@@ -56,6 +56,7 @@ class Goblin(callbacks.Plugin):
         results = []
         die = 1
         while (die <= dice):
+            random.seed()
             result = random.randint(1, sides)
             results.append(result)
             die = die + 1
@@ -69,6 +70,7 @@ class Goblin(callbacks.Plugin):
         # Add results to list
         for result in results:
             defaultDiceResults.append(result)
+        return sides
 
     def roll(self, irc, junk, junk2, args):
         """roll the dice"""
@@ -110,7 +112,8 @@ class Goblin(callbacks.Plugin):
         # Roll the dice, and add to appropriate list
         for dice in positiveDice:
             defaultDiceResults = positiveDiceResults
-            self._diceresults(dice, defaultDiceResults)
+            # Catch if sides are 20 for fun text latet
+            sides = self._diceresults(dice, defaultDiceResults)
         for dice in negativeDice:
             defaultDiceResults = negativeDiceResults
             self._diceresults(dice, defaultDiceResults)
@@ -118,37 +121,52 @@ class Goblin(callbacks.Plugin):
         msg = ''
         # Empty math list
         mathlist = []
+        # Do we need to send a total at the end? Default to False
+        totalreplyneeded = False
         # Sum of positive rolls
         if positiveDiceResults:
             pdrtotal = sum(positiveDiceResults)
             mathlist.append(pdrtotal)
             if len(positiveDiceResults) > 1:
                 msg = msg + "You rolled " + str(positiveDiceResults)
+                totalreplyneeded = True
             else:
-                msg = msg + "You rolled a " + str(positiveDiceResults[0])
+                if sides == '20':
+                    if pdrtotal == 1:
+                        msg = msg + "Critical Failure, you rolled a " + str(positiveDiceResults[0])
+                    elif pdrtotal == int(sides):
+                        msg = msg + "Critical Hit!, you rolled a " + str(positiveDiceResults[0])
+                    else:
+                        msg = msg + "You rolled a " + str(positiveDiceResults[0])
+                else:
+                    msg = msg + "You rolled a " + str(positiveDiceResults[0])
         # Sum of positive modifiers
         if positiveModifier:
             pmtotal = sum(positiveModifier)
             mathlist.append(pmtotal)
             msg = msg + " + positive modifiers of " + str(pmtotal)
+            totalreplyneeded = True
         # Sum of negative rolls
         if negativeDiceResults:
             ndrtotal = sum(negativeDiceResults)
             mathlist.append(-ndrtotal)
+            totalreplyneeded = True
             if len(negativeDiceResults) > 1:
                 msg = msg + " - negative rolls of " + str(negativeDiceResults)
             else:
-                msg = msg + " - negative roll of " + str(negativeDiceResults)
+                msg = msg + " - negative roll of " + str(negativeDiceResults[0])
         # Sum of negative modifiers
         if negativeModifier:
             nmtotal = sum(negativeModifier)
             mathlist.append(-nmtotal)
             msg = msg + " - negative modifiers of " + str(nmtotal)
+            totalreplyneeded = True
         # Send the long message with all the above
         irc.reply(msg)
         # Do the math, and send the total
-        total = sum(mathlist)
-        irc.reply("For a total of %s" % total)
+        if totalreplyneeded:
+            total = sum(mathlist)
+            irc.reply("For a total of %s" % total)
 
     roll = wrap(roll, [any('something')])
 
