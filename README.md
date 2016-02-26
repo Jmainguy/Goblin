@@ -1,0 +1,1 @@
+Fight a goblin
